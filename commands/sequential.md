@@ -1,42 +1,48 @@
 ---
-description: 모델A가 분석/제안 → 모델B가 비판적 검증 → 메인이 종합하여 실행
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/invoke-sequential.sh:*)", "Read(*/.orchestration/results/*)"]
+description: 모델A가 작업 수행 → 모델B가 결과를 비판적으로 검증·보완 (구현→리뷰, 설계→보안검토)
 ---
-# /sequential — A가 제안 → B가 검증 → 메인이 실행
+# /sequential — A가 작업 → B가 비판적으로 검증 (v5)
 
-첫 번째 Advisor가 분석/제안하고, 두 번째 Advisor가 검증합니다.
-메인 에이전트가 두 의견을 종합하여 최종 계획을 세웁니다.
+첫 번째 모델이 결과물을 만들고, 두 번째 모델이 그것의 문제점을 찾아 보완합니다.
+중요한 결과물의 품질을 높이거나 단계별 파이프라인이 필요할 때 사용.
 
-**패턴**: `[Advisor A 제안] → [Advisor B 검증] → Opus 종합 → 실행`
+**패턴**: `태스크 → [모델A 실행] → A 결과 → [모델B 검증] → 최종 결과`
 
 ## 사용법
 ```
 /sequential <모델A> <모델B> <태스크>
 ```
 
-## 실행 방법 (v3.1: Non-Blocking)
+## 언제 쓰나
+- 구현 → 리뷰: `codex → opus`
+- 설계 → 보안 검토: `gemini → codex`
+- 리서치 → 사실 검증: `gemini → opus`
+- 코드 작성 → 버그 찾기: `opus → codex`
 
-### Phase 1: Advisory (비동기)
-1. `$ARGUMENTS`에서 모델A, 모델B, 태스크 분리
-2. 사용자에게 "<A> → <B> 순차 자문을 요청합니다." 안내
-3. Task 도구로 백그라운드 서브에이전트 생성:
-   - subagent_type: general-purpose
-   - model: sonnet
-   - run_in_background: true
-   - prompt: |
-       다음 명령을 실행하고 결과를 반환하라:
-       1. bash "~/.claude/orchestration/scripts/invoke-sequential.sh" "<A>" "<B>" "<태스크>"
-       2. 출력에서 ORCH_RESULT_FILE= 뒤의 경로를 추출
-       3. 해당 파일을 Read로 읽어서 전체 내용을 반환
-4. 사용자와 대화 계속 가능
+## 예시
+```
+/sequential codex opus 이 결제 모듈 구현해줘
+/sequential gemini codex 이 마이크로서비스 아키텍처 검토해줘
+/sequential opus codex 이 코드 리뷰 결과를 다시 확인해줘
+```
 
-### Phase 2: Synthesis (완료 알림 후)
-5. 서브에이전트 완료 시 결과 수신
-6. A의 제안 + B의 검증 결과를 종합 분석:
-   - A의 핵심 결론
+## v5 토큰 최적화 규칙
+
+### 모델B에게 전달할 때
+- A의 결과를 **요약 (최대 10줄)** + **구체적 질문 1개**로 구성
+- "전체 리뷰해줘" 금지 → "이 설계에서 edge case 3개만 찾아줘" 형태로
+
+### 모델B의 출력 제한
+- **최대 5개 항목**, 핵심만
+- 새로운 문제만 지적 (모델A가 이미 다룬 내용 반복 금지)
+
+## 실행 방법
+1. `$ARGUMENTS`에서 첫 단어를 모델A, 두 번째를 모델B, 나머지를 태스크로 분리
+2. 순차 실행:
+   ```
+   bash ~/.claude/orchestration/scripts/invoke-sequential.sh "<모델A>" "<모델B>" "<태스크>"
+   ```
+3. 결과 정리:
+   - A의 핵심 결론 요약
    - B가 발견한 이슈/개선점
-   - 최종 통합 결론 + 실행 계획
-
-### Phase 3: Execution (코드 변경 시, 비동기)
-7. 코드 수정이 필요하면 Task(background, sonnet)로 실행
-8. 완료 시 변경 사항을 사용자에게 보고
+   - **Claude(Opus)가 최종 판정** (v5 Rule 5: 모든 변경은 Claude 승인 기반)

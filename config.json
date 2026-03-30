@@ -1,8 +1,25 @@
 {
   "models": {
-    "opus":   { "cli": "claude",  "model_id": "opus",              "cost": "high",   "strength": "복잡한 판단, 코드 리뷰, 범용 코딩" },
-    "codex":  { "cli": "codex",   "model_id": "gpt-5.3-codex",     "cost": "medium", "strength": "백엔드 로직, 디버깅, 보안 분석" },
-    "gemini": { "cli": "gemini",  "model_id": "gemini-3-pro-preview", "cost": "medium", "strength": "UI/UX, 리서치, 대용량 컨텍스트" }
+    "opus":   { "cli": "claude",  "model_id": "opus",              "cost": "high",   "strength": "설계, 판단, 통합, 핵심 구현" },
+    "codex":  { "cli": "codex",   "model_id": "gpt-5.3-codex",     "cost": "medium", "strength": "기능 리뷰, 미세 구현, 디버깅" },
+    "gemini": { "cli": "gemini",  "model_id": "gemini-3-pro-preview", "cost": "medium", "strength": "디자인 리뷰, 구조 비판, UX 평가" }
+  },
+  "roles": {
+    "opus": {
+      "title": "Planner + Integrator + Core Implementer",
+      "must": ["설계", "판단(선택 필요)", "충돌 해결", "병렬 분배", "최종 통합"],
+      "avoid": ["반복 코드 작성", "단순 구현", "boilerplate 생성"]
+    },
+    "codex": {
+      "title": "Functional Reviewer + Micro-Implementer",
+      "must": ["기능 결함 탐지", "API/로직 검증", "테스트 포인트 제안", "작은 코드 단위 구현", "디버깅"],
+      "forbidden": ["전체 기능 구현", "구조 재설계"]
+    },
+    "gemini": {
+      "title": "Design Critic + UX/Structure Reviewer",
+      "must": ["UI/UX 흐름 검토", "구조 단순화 제안", "컴포넌트 설계 평가", "유지보수성 분석"],
+      "forbidden": ["기능 구현 주도", "요구사항 변경"]
+    }
   },
   "categories": {
     "backend":      { "primary": "codex",  "fallback": "opus" },
@@ -21,5 +38,128 @@
     "sequential":  { "models": 2, "description": "A 결과를 B에 전달" },
     "adversarial": { "models": 2, "description": "서로 반박/검증" },
     "consensus":   { "models": 3, "description": "75% 합의 게이트" }
+  },
+  "review_loop": {
+    "max_rounds": 3,
+    "phases": {
+      "A_initial": "설계 초안 → Codex 기능 리뷰 + Gemini 디자인 리뷰",
+      "B_revision": "Claude delta 수정 → Codex/Gemini 신규 문제만 지적 (기존 반복 금지)",
+      "C_final": "Codex/Gemini 치명적 문제만 확인 → Claude 구현 가능 판정"
+    },
+    "exit_conditions": [
+      "치명적 문제 0개",
+      "신규 이슈 <= 2개 (각 모델)",
+      "구조 변경 제안 없음",
+      "변경이 국소적",
+      "병렬 분해 가능"
+    ]
+  },
+  "token_rules": {
+    "input": {
+      "description": "Codex/Gemini 호출 시 입력 제한",
+      "format": ["설계 요약 (최대 10줄)", "목표 1줄", "특정 질문 1개"],
+      "good_examples": [
+        "이 설계에서 테스트 어려운 부분 3개만",
+        "이 API의 edge case만 지적해",
+        "이 UI 구조가 복잡한 이유만 말해"
+      ],
+      "bad_examples": [
+        "이 기능 전체 구현해",
+        "전체 설계 리뷰해줘"
+      ]
+    },
+    "output": {
+      "max_items": 5,
+      "rule": "핵심만, 장황한 설명 금지"
+    }
+  },
+  "parallel_strategy": {
+    "decompose_by": "layer",
+    "good_units": ["UI/Presentation", "Domain/Service", "Data/Repository", "Integration/API", "Test/Validation"],
+    "bad_units": ["로그인 기능", "프로필 기능", "설정 기능"],
+    "sub_agent_template": ["담당 파일 목록", "수정 가능 범위", "생성 가능 파일", "금지 영역", "의존 인터페이스", "완료 조건", "테스트 방법", "측정 기준", "실패 시 행동", "에스컬레이션 조건", "롤백 단위"]
+  },
+  "rules": {
+    "rule_1": "Claude는 항상 결정할 때만 사용",
+    "rule_2": "Codex/Gemini는 짧고 날카롭게",
+    "rule_3": "리뷰는 최대 3라운드",
+    "rule_4": "병렬 작업은 파일/레이어 기준 분해",
+    "rule_5": "모든 변경은 Claude 승인 기반"
+  },
+
+  "evaluator": {
+    "priority": ["ROLLBACK", "ESCALATE", "RETRY", "PASS"],
+    "thresholds": {
+      "test_critical_threshold": 5,
+      "warning_threshold": 10
+    },
+    "rules": [
+      { "id": "build_fail",      "condition": "build == fail",                                          "judgment": "ROLLBACK" },
+      { "id": "security_crit",   "condition": "security == critical",                                    "judgment": "ESCALATE" },
+      { "id": "test_mass_fail",  "condition": "test.failed > test_critical_threshold",                   "judgment": "ESCALATE" },
+      { "id": "typecheck_fail",  "condition": "typecheck == fail",                                       "judgment": "RETRY" },
+      { "id": "test_minor_fail", "condition": "test.failed > 0 && test.failed <= test_critical_threshold", "judgment": "RETRY" },
+      { "id": "lint_fail",       "condition": "lint == fail",                                            "judgment": "RETRY" },
+      { "id": "security_warn",   "condition": "security == warning",                                     "judgment": "RETRY" }
+    ],
+    "commands": {
+      "_comment": "프로젝트별 .orchestration/eval-config.json으로 override 가능 (partial patch)",
+      "default": {
+        "build": "npm run build",
+        "lint": "npm run lint",
+        "typecheck": "npx tsc --noEmit",
+        "test": "npm test -- --json",
+        "security": "npm audit --json"
+      },
+      "unity": {
+        "build": null,
+        "lint": null,
+        "typecheck": null,
+        "test": null,
+        "security": null
+      }
+    },
+    "eval_dir": ".orchestration/eval",
+    "ttl_minutes": 30,
+    "max_history": 10
+  },
+
+  "state_machine": {
+    "state_file": ".orchestration/state.json",
+    "valid_states": ["DRAFT", "REVIEW", "APPROVED", "IMPLEMENTING", "VERIFYING", "RETRYING", "ESCALATED", "COMPLETED", "ROLLED_BACK"],
+    "initial_state": "DRAFT",
+    "terminal_states": ["COMPLETED", "ROLLED_BACK"],
+    "retry_limits": {
+      "micro": 2,
+      "structural": 1
+    },
+    "obsidian_sync": "one-way",
+    "user_override_requires_log": true
+  },
+
+  "model_policy": {
+    "claude_first": true,
+    "codex": {
+      "invoke_conditions": ["test_failure", "runtime_error", "debug_needed", "edge_case"],
+      "invoke_contexts": ["review", "debug", "implementation", "verification"],
+      "invoke_phases": ["A", "B"],
+      "skip_if_eval_pass": true
+    },
+    "gemini": {
+      "invoke_conditions": ["structural_complexity", "ux_issue", "maintainability"],
+      "invoke_contexts": ["review", "design", "architecture"],
+      "invoke_phases": ["A"],
+      "skip_if_eval_pass": true
+    }
+  },
+
+  "failure_routing": {
+    "compile_failure":       { "model": "codex",  "fallback": "opus" },
+    "test_failure":          { "model": "codex",  "fallback": "opus" },
+    "structural_complexity": { "model": "gemini", "fallback": "opus" },
+    "ux_issue":              { "model": "gemini", "fallback": "opus" },
+    "security_warning":      { "model": "codex",  "fallback": "opus" },
+    "performance_issue":     { "model": "codex",  "fallback": "opus" },
+    "design_conflict":       { "model": "opus",   "fallback": null }
   }
 }

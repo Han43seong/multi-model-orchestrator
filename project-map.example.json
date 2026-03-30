@@ -1,0 +1,83 @@
+{
+  "$schema": "project-map-v1",
+  "vault_root": "C:/Users/hskim/Documents/Git_Repo/MyNotes/Dev_Knowledge",
+  "vault_projects_dir": "10-Projects",
+
+  "resolve_priority": [
+    "explicit_override",
+    "local_project_json",
+    "claude_md_project_field",
+    "git_remote_repo_name",
+    "directory_basename",
+    "manual_selection"
+  ],
+
+  "projects": [
+    {
+      "canonical_name": "RAG-Pipeline",
+      "vault_path": "10-Projects/RAG-Pipeline",
+      "match": {
+        "repo_names": ["RAG-proj", "S1000D-RAG", "S1000D-RAG-Android"],
+        "directory_patterns": ["*RAG*", "*S1000D*", "*rag*"],
+        "aliases": ["rag", "rag-pipeline", "s1000d", "s1000d-rag"]
+      },
+      "sub_projects": {
+        "S1000D-RAG-Android": "android",
+        "S1000D-RAG": "pc"
+      }
+    },
+    {
+      "canonical_name": "VR-Simulator",
+      "vault_path": "10-Projects/VR-Simulator",
+      "match": {
+        "repo_names": ["04.M823", "VR-Simulator"],
+        "directory_patterns": ["*M823*", "*VR-Simulator*", "*VR*Simulator*"],
+        "aliases": ["vr", "vr-sim", "m823"]
+      }
+    },
+    {
+      "canonical_name": "VR-Project-KR",
+      "vault_path": "10-Projects/VR-Project-KR",
+      "match": {
+        "repo_names": [],
+        "directory_patterns": [],
+        "aliases": ["vr-kr", "vr-project-kr"]
+      },
+      "note": "VR-Simulator와 동일 프로젝트의 한글 가이드. 별도 매핑보다는 VR-Simulator의 하위 문서"
+    },
+    {
+      "canonical_name": "Dev_Pipeline",
+      "vault_path": "10-Projects/Dev_Pipeline",
+      "match": {
+        "repo_names": ["Dev_Knowledge"],
+        "directory_patterns": ["*Dev_Knowledge*", "*MyNotes*"],
+        "aliases": ["dev-pipeline", "workflow", "orchestration"]
+      }
+    },
+    {
+      "canonical_name": "Voice-Pipeline",
+      "vault_path": "10-Projects/Voice-Pipeline",
+      "match": {
+        "repo_names": ["tts-proj"],
+        "directory_patterns": ["*tts*", "*stt*", "*voice*"],
+        "aliases": ["voice", "tts", "stt", "voice-pipeline"]
+      }
+    },
+    {
+      "canonical_name": "SAM3D",
+      "vault_path": "10-Projects/SAM3D",
+      "match": {
+        "repo_names": ["SAM3D"],
+        "directory_patterns": ["*SAM3D*", "*sam3d*"],
+        "aliases": ["sam3d"]
+      }
+    }
+  ],
+
+  "fallback": {
+    "mode": "draft_to_inbox",
+    "draft_path": "00-Inbox",
+    "prompt_user": true,
+    "message": "프로젝트를 식별할 수 없습니다. 프로젝트를 선택하거나 새로 등록하세요."
+  }
+}

@@ -1,8 +1,0 @@
-{
-  "name": "multi-model-orchestrator",
-  "description": "CLI subprocess 기반 멀티모델 오케스트레이션 — opus, codex, gemini를 병렬/순차/합의 패턴으로 조율",
-  "author": {
-    "name": "hskim",
-    "email": "hskim@wintek.co.kr"
-  }
-}
