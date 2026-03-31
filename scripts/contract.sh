@@ -107,21 +107,17 @@ Rules:
 - verification must describe a concrete, reproducible action
 - Focus on functional correctness, not style"
 
-DRAFT_OUTPUT_FILE=$(mktemp /tmp/contract_draft_XXXXXX.md)
-ORCH_OUTPUT_FILE="$DRAFT_OUTPUT_FILE" \
-  bash "$SCRIPT_DIR/invoke-model.sh" opus "$DRAFT_PROMPT" 2>/dev/null
-
-DRAFT_CONTENT=""
-if [ -f "$DRAFT_OUTPUT_FILE" ] && [ -s "$DRAFT_OUTPUT_FILE" ]; then
-  DRAFT_CONTENT=$(cat "$DRAFT_OUTPUT_FILE")
-fi
-rm -f "$DRAFT_OUTPUT_FILE"
+DRAFT_CONTENT=$(bash "$SCRIPT_DIR/invoke-model.sh" opus "$DRAFT_PROMPT" 2>/dev/null)
 
 if [ -z "$DRAFT_CONTENT" ]; then
   echo '{"error": "failed to generate contract draft"}' >&2
   echo "[$(date '+%H:%M:%S')] [contract] FAILED draft generation" >> "$LOG_DIR/session-log.md"
   exit 1
 fi
+
+# --- Draft를 임시 파일에 저장 (쉘 인자 전달 문제 우회) ---
+DRAFT_TMPFILE=$(mktemp /tmp/contract_draft_content_XXXXXX.txt)
+echo "$DRAFT_CONTENT" > "$DRAFT_TMPFILE"
 
 # --- Contract JSON 생성 (Python) ---
 TMPPY=$(mktemp /tmp/contract_build_XXXXXX.py)
@@ -132,8 +128,10 @@ from datetime import datetime
 
 task_id = sys.argv[1]
 task_desc = sys.argv[2]
-draft_content = sys.argv[3]
+draft_file = sys.argv[3]
 contract_file = sys.argv[4]
+
+draft_content = open(draft_file, encoding='utf-8', errors='replace').read()
 
 # JSON 추출
 json_match = re.search(r'\{[\s\S]*"criteria"[\s\S]*\}', draft_content)
@@ -165,9 +163,9 @@ with open(contract_file, 'w', encoding='utf-8') as f:
 print(json.dumps(contract, indent=2, ensure_ascii=False))
 PYEOF
 
-DRAFT_CONTRACT=$(python3 "$TMPPY" "$TASK_ID" "$TASK" "$DRAFT_CONTENT" "$CONTRACT_FILE" 2>&1)
+DRAFT_CONTRACT=$(python3 "$TMPPY" "$TASK_ID" "$TASK" "$DRAFT_TMPFILE" "$CONTRACT_FILE" 2>&1)
 PARSE_EXIT=$?
-rm -f "$TMPPY"
+rm -f "$TMPPY" "$DRAFT_TMPFILE"
 
 if [ $PARSE_EXIT -ne 0 ]; then
   echo "$DRAFT_CONTRACT" >&2
@@ -212,15 +210,7 @@ Respond in this exact JSON format (NO other text):
 
 If all criteria are clear, verifiable, and complete, respond with verdict APPROVE and empty issues/missing arrays."
 
-  REVIEW_OUTPUT_FILE=$(mktemp /tmp/contract_review_XXXXXX.md)
-  ORCH_OUTPUT_FILE="$REVIEW_OUTPUT_FILE" \
-    bash "$SCRIPT_DIR/invoke-model.sh" "$REVIEWER" "$REVIEW_PROMPT" 2>/dev/null
-
-  REVIEW_CONTENT=""
-  if [ -f "$REVIEW_OUTPUT_FILE" ] && [ -s "$REVIEW_OUTPUT_FILE" ]; then
-    REVIEW_CONTENT=$(cat "$REVIEW_OUTPUT_FILE")
-  fi
-  rm -f "$REVIEW_OUTPUT_FILE"
+  REVIEW_CONTENT=$(bash "$SCRIPT_DIR/invoke-model.sh" "$REVIEWER" "$REVIEW_PROMPT" 2>/dev/null)
 
   if [ -z "$REVIEW_CONTENT" ]; then
     echo "[$(date '+%H:%M:%S')] [contract] WARN round=$CURRENT_ROUND reviewer returned empty, forcing agree" >> "$LOG_DIR/session-log.md"

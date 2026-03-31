@@ -112,6 +112,10 @@ cp "$SCRIPT_DIR/learning/docker-compose.yml" "$TARGET_LEARN/"
 cp "$SCRIPT_DIR/learning/init.sql" "$TARGET_LEARN/"
 cp "$SCRIPT_DIR/learning/learning_db.py" "$TARGET_LEARN/"
 
+# hooks
+mkdir -p "$TARGET_LEARN/hooks"
+cp "$SCRIPT_DIR/learning/hooks/"*.py "$TARGET_LEARN/hooks/"
+
 # learning.json (API 키 설정)
 if [ ! -f "$TARGET_ORCH/learning.json" ]; then
   if [ -f "$SCRIPT_DIR/learning/learning.example.json" ]; then
@@ -180,6 +184,8 @@ echo ""
 echo "  3. Learning System:"
 echo "     - DB 상태 확인: python3 ~/.claude/orchestration/learning/learning_db.py db-status"
 echo "     - Gemini API 키 수정: ~/.claude/orchestration/learning.json"
+echo "     - Hook 등록 (선택): ~/.claude/settings.json에 hooks 섹션 추가"
+echo "       자세한 설정은 README의 Learning System 섹션 참조"
 echo ""
 echo "  4. Claude Code에서 / 입력 시 9개 커맨드가 표시됩니다:"
 echo "     /delegate /parallel /sequential /adversarial"

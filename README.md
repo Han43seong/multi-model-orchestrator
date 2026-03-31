@@ -268,6 +268,51 @@ bypass 가능한 컴포넌트:
 | `BYPASS_REVIEW` | review-loop.sh |
 | `BYPASS_POLICY` | should-invoke.sh |
 
+## Learning System (v6.2)
+
+경험을 축적하고 재활용하는 학습 시스템. PostgreSQL + pgvector 기반.
+
+### 구성 요소
+
+| 기능 | 설명 |
+|------|------|
+| **스킬 자동 생성** | 복잡한 작업 후 경험을 구조화된 스킬로 DB 저장 |
+| **시맨틱 검색** | 벡터 검색으로 유사 스킬/세션 검색 (Gemini Embedding) |
+| **세션 기록** | FTS + 벡터 하이브리드 검색, 시간 기반 필터 |
+| **사용자 모델링** | 선호도/패턴/전문성 자동 추론 + 다음 세션 주입 |
+| **스킬 관리** | 중복 감지, 90일 미사용 archive, 카테고리당 20개 상한 |
+
+### 설치
+
+```bash
+# install.sh에 포함 — Docker 필요
+cd ~/.claude/orchestration/learning
+docker compose up -d   # PostgreSQL + pgvector 시작
+```
+
+### 사용
+
+```bash
+LEARN="python3 ~/.claude/orchestration/learning/learning_db.py"
+
+# 스킬 저장 + 자동 중복 감지
+$LEARN skill-store --name "..." --description "..." --category "devops"
+
+# 유사 스킬 검색 (벡터)
+$LEARN skill-search --query "Docker 배포 문제"
+
+# 세션 저장/검색
+$LEARN session-store --session-id "..." --summary "..."
+$LEARN session-search --query "지난주 FastAPI 에러" --mode hybrid
+
+# 사용자 프로필
+$LEARN profile-update --user hskim --preferences '{"lang": "TypeScript"}'
+$LEARN profile-load --user hskim
+
+# DB 상태
+$LEARN db-status
+```
+
 ## 에이전트 프롬프트
 
 | 에이전트 | 기본 모델 | 역할 |
@@ -350,6 +395,10 @@ bash ~/.claude/orchestration/scripts/invoke-model.sh --force codex "<prompt>"
     │   ├── resolve-project.sh   ← 프로젝트 매핑
     │   ├── contract.sh          ← Contract Phase (Harness)
     │   └── stress-test.sh       ← 컴포넌트 스트레스 테스트 (Harness)
+    ├── learning/
+    │   ├── docker-compose.yml   ← PostgreSQL + pgvector
+    │   ├── init.sql             ← DB 스키마 (4 테이블)
+    │   └── learning_db.py       ← 학습 시스템 CLI
     └── prompts/
         ├── code-reviewer.md
         ├── debugger.md
@@ -373,7 +422,8 @@ bash uninstall.sh
 | v4 | CLI subprocess 안정화, HOME 격리 |
 | v5 | 역할 기반, 3라운드 리뷰 루프, 토큰 최적화 |
 | v6 | Claude-first, Evaluator 자동 판정, 상태 머신, 정책 함수, Obsidian 연동 |
-| **v6.1** | Harness 패턴 — Contract Phase, Functional Evaluation, Stress Test |
+| v6.1 | Harness 패턴 — Contract Phase, Functional Evaluation, Stress Test |
+| **v6.2** | Learning System — 스킬 축적, 시맨틱 검색, 사용자 모델링 (pgvector) |
 
 ## 라이선스
 
