@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: orch-learning-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: orchestration
+      POSTGRES_USER: orch
+      POSTGRES_PASSWORD: orch_local_2026
+    ports:
+      - "5433:5432"
+    volumes:
+      - orch_pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orch -d orchestration"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  orch_pgdata:
