@@ -61,6 +61,7 @@ Aliases: `opus`, `codex`, `gemini`
 | `/orchestrate` | 설계 → 리뷰 루프 → 병렬 구현 → 통합 |
 | `/plan` | Obsidian 계획 문서 → 승인 → /orchestrate 연동 |
 | `/experiment` | 가설 검증 실험 → PASS/FAIL/UNSURE 판정 |
+| `/harness` | 하네스 기반 개발: 요구사항 명세 → Contract → 반복 구현 + 평가 |
 
 ### 카테고리 라우팅 + 실패 기반 라우팅
 | 의도/실패 유형 | 모델 |

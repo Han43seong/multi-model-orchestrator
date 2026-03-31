@@ -96,7 +96,7 @@ fi
 
 # commands 디렉토리
 mkdir -p "$TARGET_CMD"
-echo "  commands/ (8개)"
+echo "  commands/ (9개)"
 cp "$SCRIPT_DIR/commands/"*.md "$TARGET_CMD/"
 
 # =====================================================
@@ -122,6 +122,6 @@ echo "     - project-map.json을 프로젝트에 맞게 수정"
 echo ""
 echo "  3. Claude Code에서 / 입력 시 8개 커맨드가 표시됩니다:"
 echo "     /delegate /parallel /sequential /adversarial"
-echo "     /consensus /orchestrate /plan /experiment"
+echo "     /consensus /orchestrate /plan /experiment /harness"
 echo ""
 echo "  4. 테스트: /delegate codex 안녕하세요"
