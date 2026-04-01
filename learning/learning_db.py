@@ -353,6 +353,30 @@ def profile_update(user_id, preferences=None, patterns=None, expertise=None):
     conn.close()
     return {"action": "updated", "user_id": user_id}
 
+def create_indexes():
+    conn = get_conn()
+    cur = conn.cursor()
+    results = {}
+    for table, col, idx_name in [
+        ("skills", "embedding", "idx_skills_embedding_ivfflat"),
+        ("session_logs", "embedding", "idx_sessions_embedding_ivfflat"),
+    ]:
+        cur.execute(f"SELECT COUNT(*) FROM {table} WHERE {col} IS NOT NULL")
+        count = cur.fetchone()[0]
+        cur.execute("SELECT 1 FROM pg_indexes WHERE indexname = %s", (idx_name,))
+        exists = cur.fetchone() is not None
+        if exists:
+            results[table] = {"status": "exists", "count": count}
+        elif count >= 100:
+            cur.execute(f"CREATE INDEX {idx_name} ON {table} USING ivfflat ({col} vector_cosine_ops) WITH (lists = 10)")
+            conn.commit()
+            results[table] = {"status": "created", "count": count}
+        else:
+            results[table] = {"status": "skipped", "count": count, "need": 100}
+    cur.close()
+    conn.close()
+    return results
+
 def profile_load(user_id):
     conn = get_conn()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -454,6 +478,8 @@ def main():
             result = profile_load(user_id=args["user"])
         elif cmd == "db-status":
             result = db_status()
+        elif cmd == "create-indexes":
+            result = create_indexes()
         else:
             print(f"Unknown command: {cmd}")
             print(__doc__)

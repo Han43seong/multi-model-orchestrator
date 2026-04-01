@@ -102,22 +102,30 @@ Obsidian CLI는 긴 content에서 hang되는 경우가 있으므로, **Vault 경
     ```
 12. 다시 Phase 3으로 돌아가 리뷰 요청
 
-### Phase 5: 승인 → 실행 (v5 /orchestrate 연동)
+### Phase 5: 승인 → 실행
 13. CLI로 상태를 approved로 변경:
     ```bash
     cmd.exe //c "obsidian property:set name=status value=approved path=$PLANS_PATH/<파일>.md"
     ```
-14. **실행 방식 결정**:
-    - 단순 작업: 직접 실행
-    - **복합 태스크: `/orchestrate` 워크플로우로 자동 전환**
-      - 계획 문서의 구현 계획을 기반으로 서브태스크 분해
-      - v5 리뷰 루프 (최대 3라운드) 적용
-      - 레이어 기준 병렬 구현
-15. CLI로 상태를 in-progress로 변경:
+14. **실행 방식 판정** — Plan 문서의 Step 수와 복잡도 기준:
+    - **단순 (Step 2개 이하, 파일 3개 미만 변경)**: 직접 실행
+    - **복합 (Step 3개 이상 또는 다중 레이어)**: `/orchestrate` 자동 전환
+
+15. **복합 태스크 → /orchestrate 자동 전환**:
+    - Plan 문서에서 Step 목록 추출
+    - 각 Step을 `/orchestrate`의 서브태스크로 변환
+    - Skill 도구로 `/orchestrate` 호출:
+      ```
+      Skill: "orchestrate"
+      Args: "Plan '<문서명>'의 Step들을 실행: Step 1: <내용>, Step 2: <내용>, ..."
+      ```
+    - /orchestrate가 각 Step에 모델 배정 → 병렬/순차 실행 → 통합
+
+16. CLI로 상태를 in-progress로 변경:
     ```bash
     cmd.exe //c "obsidian property:set name=status value=in-progress path=$PLANS_PATH/<파일>.md"
     ```
-16. 작업 완료 시:
+17. 작업 완료 시:
     - 실행 결과를 plan 문서에 Edit 도구로 append
     - 상태를 completed로 변경:
       ```bash

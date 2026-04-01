@@ -83,11 +83,20 @@ description: 복잡한 요청을 서브태스크로 분해 → 각각 최적 모
 18. 통합 보고서: 각 서브태스크 요약 + 전체 결론 + 다음 단계 제안
 
 ## /plan 연동
-- `/plan`에서 승인된 계획이 있으면 해당 계획 기반으로 실행
-- 실행 결과를 plan 문서에 append:
-  ```bash
-  obsidian append path="01-Projects/Plans/<파일>.md" content="## 실행 결과\n<결과 요약>"
-  ```
+
+`/plan`에서 자동 전환되어 호출된 경우:
+
+1. `$ARGUMENTS`에 "Plan '<문서명>'의 Step들을 실행:" 형식이 포함됨
+2. Step 목록을 파싱하여 서브태스크로 변환 (Phase 1 자동 완료)
+3. 각 Step에 카테고리 배정 → 모델 결정 → Phase 2(사용자 확인)부터 진행
+4. 실행 완료 후 `resolve-project.sh`로 Vault 경로를 획득하여 결과를 Plan 문서에 append:
+   ```
+   ## 실행 결과
+   - 완료일: YYYY-MM-DD
+   - 서브태스크 N개 중 N개 완료
+   - 결과 요약: ...
+   ```
+5. Plan 문서의 status를 completed로 변경
 
 ## 카테고리 → 모델 라우팅
 | 카테고리 | 모델 |
