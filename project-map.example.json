@@ -1,6 +1,6 @@
 {
   "$schema": "project-map-v1",
-  "vault_root": "C:/Users/hskim/Documents/Git_Repo/MyNotes/Dev_Knowledge",
+  "vault_root": "C:/Users/<user>/Documents/Dev_Knowledge",
   "vault_projects_dir": "10-Projects",
 
   "resolve_priority": [
